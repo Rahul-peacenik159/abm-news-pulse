@@ -1,0 +1,44 @@
+{
+ "articles": [
+  {
+   "url": "https://news.example/a1",
+   "title": "Acme Corp raises $50 million Series B to expand AI platform",
+   "seendate": "20261118T101500Z",
+   "domain": "news.example",
+   "language": "English",
+   "sourcecountry": "United States"
+  },
+  {
+   "url": "https://wire.example/a1-copy",
+   "title": "Acme Corp Raises $50 Million Series B To Expand AI Platform!",
+   "seendate": "20261118T111500Z",
+   "domain": "wire.example",
+   "language": "English",
+   "sourcecountry": "United States"
+  },
+  {
+   "url": "https://news.example/a2",
+   "title": "Acme names new CFO from Stripe",
+   "seendate": "20261119T080000Z",
+   "domain": "news.example",
+   "language": "English",
+   "sourcecountry": "United States"
+  },
+  {
+   "url": "https://news.example/a3",
+   "title": "Acme to acquire DataCo in $200M deal",
+   "seendate": "20261117T080000Z",
+   "domain": "news.example",
+   "language": "English",
+   "sourcecountry": "United Kingdom"
+  },
+  {
+   "url": "https://news.example/a4",
+   "title": "Industry roundup: cloud spending rises",
+   "seendate": "20261116T080000Z",
+   "domain": "news.example",
+   "language": "English",
+   "sourcecountry": "United States"
+  }
+ ]
+}

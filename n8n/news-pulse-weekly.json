@@ -1,0 +1,213 @@
+{
+  "name": "ABM news pulse (weekly)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e3b70780-98e4-400f-b245-73220bf465bf",
+      "name": "Manual run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "687323f5-b8d1-455e-80cb-122c315ae052",
+      "name": "Weekly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Replace with a Google Sheets / HubSpot node with domain + company (+ optional query).\nreturn [\n  { domain: 'snowflake.com', company: 'Snowflake' },\n  { domain: 'crowdstrike.com', company: 'CrowdStrike' },\n].map((a) => ({ json: { ...a, query: (a.query || a.company) + ' sourcelang:english' } }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "fe85f162-5d0c-4dff-adaa-258e7dba5a0a",
+      "name": "Accounts",
+      "position": [
+        240,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.gdeltproject.org/api/v2/doc/doc",
+        "options": {
+          "timeout": 30000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 6000
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "mode",
+              "value": "artlist"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "maxrecords",
+              "value": "75"
+            },
+            {
+              "name": "timespan",
+              "value": "7d"
+            },
+            {
+              "name": "sort",
+              "value": "datedesc"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "id": "f9d8fab5-a0b4-484d-8d7b-e79014427cb3",
+      "name": "GDELT articles",
+      "position": [
+        480,
+        100
+      ],
+      "notes": "GDELT allows one request every 5 seconds; batching waits 6 s between accounts."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Event types on headlines (subset of config/events.yaml). One signal per type per account.\nconst EVENTS = {\n  funding: [/\\b(raises?|raised|funding|series [a-h]\\b|seed round|valuation)\\b/i, 20, 'growth_budget_window'],\n  acquisition: [/\\b(acquires?|acquired|acquisition|merger|to buy|takeover)\\b/i, 25, 'post_merger_integration'],\n  leadership: [/\\b(appoints?|appointed|names? new|hires?|new (ceo|cfo|cto|cmo|cro|ciso)|steps down|resigns?)\\b/i, 20, 'new_leader_first_90_days'],\n  expansion: [/\\b(expands?|expansion|opens?|new (office|headquarters|hub|location))\\b/i, 15, 'expansion_support'],\n  layoffs: [/\\b(layoffs?|lays off|job cuts|restructur\\w*)\\b/i, 15, 'cost_reduction_pitch'],\n  security_incident: [/\\b(breach|ransomware|cyberattack|hacked|data leak)\\b/i, 15, 'incident_response_support'],\n  partnership: [/\\b(partners? with|partnership|teams up)\\b/i, 10, 'partner_co_sell'],\n};\nconst now = new Date().toISOString();\nconst accounts = $('Accounts').all();\nconst resp = $('GDELT articles').all();\nconst out = [];\naccounts.forEach((acc, i) => {\n  const name = acc.json.company.toLowerCase();\n  const arts = (((resp[i] || {}).json || {}).articles || []).filter((a) => (a.title || '').toLowerCase().includes(name));\n  for (const [type, [rx, weight, play]] of Object.entries(EVENTS)) {\n    const hits = arts.filter((a) => rx.test(a.title || ''));\n    if (!hits.length) continue;\n    out.push({ account_domain: acc.json.domain, signal_type: 'news_' + type, signal_value: String(hits.length),\n      tool_name: acc.json.company, category: 'news', role: 'trigger', weight, play, source: hits[0].domain,\n      evidence: hits[0].title, evidence_url: hits[0].url, pack: 'news-pulse', observed_at: now });\n  }\n});\nreturn out.map((json) => ({ json }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "dad8e6d2-dcc7-4df9-8051-68089742d412",
+      "name": "Classify headlines",
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "projectId": {
+          "__rl": true,
+          "value": "YOUR_GCP_PROJECT",
+          "mode": "id"
+        },
+        "datasetId": {
+          "__rl": true,
+          "value": "abm",
+          "mode": "id"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "signals",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleBigQuery",
+      "typeVersion": 2.1,
+      "id": "b9757610-00f2-467a-8f98-347de7585846",
+      "name": "Write to BigQuery abm.signals",
+      "position": [
+        960,
+        100
+      ],
+      "notes": "Or swap for Slack / Google Sheets."
+    }
+  ],
+  "connections": {
+    "Manual run": {
+      "main": [
+        [
+          {
+            "node": "Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly": {
+      "main": [
+        [
+          {
+            "node": "Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accounts": {
+      "main": [
+        [
+          {
+            "node": "GDELT articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GDELT articles": {
+      "main": [
+        [
+          {
+            "node": "Classify headlines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify headlines": {
+      "main": [
+        [
+          {
+            "node": "Write to BigQuery abm.signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,58 @@
+# News event types, matched on article titles (case-insensitive regex).
+# An article can match several types. One signal per type per account per run,
+# with the article count and the newest headline as evidence.
+
+timespan: 7d               # GDELT window: 24h, 3d, 7d, 2w, 1m (max 3 months)
+max_articles: 75           # per account (GDELT max 250)
+source_language: english   # restrict to one language; empty = all languages (titles machine-translated)
+require_name_in_title: true  # drop articles whose title doesn't contain the company name
+
+events:
+  funding:
+    regex: "\\b(raises?|raised|funding|series [a-h]\\b|seed round|investment from|valuation|backed by)\\b"
+    weight: 20
+    play: growth_budget_window
+  acquisition:
+    regex: "\\b(acquires?|acquired|acquisition|merger|merges?|to buy|buys|takeover|deal to)\\b"
+    weight: 25
+    play: post_merger_integration
+  leadership:
+    regex: "\\b(appoints?|appointed|names? new|named (as )?(ceo|cfo|cto|cmo|cro|ciso|coo|president|chief)|hires?|hired|promotes?|new (ceo|cfo|cto|cmo|cro|ciso|coo)|steps down|resigns?|to lead)\\b"
+    weight: 20
+    play: new_leader_first_90_days
+  expansion:
+    regex: "\\b(expands?|expansion|opens?|opening|new (office|headquarters|hq|hub|facility|hotel|location|market)|enters?|launches in)\\b"
+    weight: 15
+    play: expansion_support
+  product_launch:
+    regex: "\\b(launch(es|ed)?|unveils?|introduces?|debuts?|rolls out|releases? new)\\b"
+    weight: 10
+    play: product_launch_congrats
+  partnership:
+    regex: "\\b(partners? with|partnership|teams up|collaborat(es|ion)|alliance|integrates with)\\b"
+    weight: 10
+    play: partner_co_sell
+  layoffs:
+    regex: "\\b(layoffs?|lays off|job cuts|cuts jobs|cutting jobs|restructur(e|es|ing)|downsiz\\w*)\\b"
+    weight: 15
+    play: cost_reduction_pitch
+  security_incident:
+    regex: "\\b(breach|ransomware|cyberattack|cyber attack|hacked|hackers|data leak|outage)\\b"
+    weight: 15
+    play: incident_response_support
+  legal_regulatory:
+    regex: "\\b(lawsuit|sues|sued|settlement|fined|investigation|probe|regulator)\\b"
+    weight: 5
+    play: read_and_personalise
+  earnings:
+    regex: "\\b(earnings|quarterly results|q[1-4] results|revenue (rose|fell|grew|jumps|drops)|beats estimates|misses estimates)\\b"
+    weight: 0
+    play: ""
+  recognition:
+    regex: "\\b(award|wins|named (a )?leader|recognized|ranked|tops)\\b"
+    weight: 5
+    play: congrats_touch
+
+# coverage spike: this many articles in the window (info + small weight)
+volume_spike_articles: 20
+volume_spike_weight: 10
